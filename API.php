@@ -4,6 +4,27 @@
     $DBurl = b_pw();
     $DBpassword = c_pw();
     $DBname = d_pw();
+	function ServerLog($Message,$Type){
+		if(isset($Message)){
+			if(isset($Type)){
+				//right to file
+				$fn = "";
+				if($Type=="error"||$Type=="Error"){
+					$fn = "error_log.txt";
+				}else{
+					$fn = "log.txt";
+				}
+				$file = fopen($fn, "a+"); 
+				$size = filesize($fn); 
+				$date = date('Y-m-d H:i:s');
+				fwrite($file, ("[".$Type."] ".$Message." ".$date."\r\n")); 
+			}else{
+				return "no type set";
+			}
+		}else{
+			return "no message";
+		}
+	}
 	class Book {
 	    // define properties
 	    public $ID;
