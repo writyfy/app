@@ -317,13 +317,25 @@
 	    	}
 	    }
 	    //Get
-	    public function getUsername(){
-	    	return $this->Username;
+	    public function getCookieUsername(){
+	    	return $this->CookieUsername;
 	    }
-	    //set
-	    public function setUsername($value){
-	    	$this->Username = $value;
-	    	self::DBConnect("Username",$value,$this->ID);
+	    public function getCookieSSID(){
+	    	return $this->CookieSSID;
+	    }
+	    public function getDB_SSID(){
+	    	return $this->DB_SSID;
+	    }
+	    public function getCookieID(){
+	    	return $this->CookieID;
+	    }
+	    //
+	    public function isSSIDCorrect(){
+	    	if(self::getDB_SSID()==self::getCookieSSID()){
+	    		return true;
+	    	}else{
+	    		return false;
+	    	}
 	    }
 	    private function DBConnect($coloum,$value,$ID){
 	    	global $DBusername,$DBurl,$DBpassword,$DBname;
@@ -331,19 +343,6 @@
 	        $result = mysqli_query($mysql_connection,"UPDATE users SET ".$coloum."='".mysqli_real_escape_string($mysql_connection,$value)."' WHERE ID = '".mysqli_real_escape_string($mysql_connection,$ID)."'");
 	    }
 	}
-
-
-
-
-
-
-
-
-
-
-
-
-
 	//$a = new User(1);
 	//$a->setUsername("JohnGreen");
 	//echo $a->getUsername();
@@ -367,27 +366,30 @@
 				$request = explode("/", substr(@$_SERVER['PATH_INFO'], 1));
 				switch ($method) {
 				  case 'PUT':
+				  	//PUT- Used to modify an existing object on the server
 				    echo "1";  
 				    break;
 				  case 'POST':
+				  	//POST- Used to create a new object on the server
 				    echo "2";  
 				    break;
 				  case 'GET':
+				  	//GET - Used for basic read requests to the server
 					$book = new Book($data);
 					print $book->getBook();
-					echo $book->getTitle();
-				    break;
-				  case 'HEAD':
-				    echo "4";  
 				    break;
 				  case 'DELETE':
+				  	//DELETE - Used to remove an object on the server
+				  	$book = new Book($data);
+					$UserID = $book->getUserID();
+					$user = new CurrentUser();
+					if($user->isSSIDCorrect()){
+
+					}
 				    echo "5";   
 				    break;
-				  case 'OPTIONS':
-				    echo "6";    
-				    break;
 				  default:
-				    echo "7";  
+				    echo "dunno....";  
 				    break;
 				}
 		        break;
@@ -396,8 +398,6 @@
 		    	break;
 		    default:
 		    echo "default";
-		    $a = new CurrentUser();
-		    echo $a->isUserValid();
 		    break;
 		}
 	}
