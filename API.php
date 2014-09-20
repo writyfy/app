@@ -17,7 +17,13 @@
 				$file = fopen($fn, "a+"); 
 				$size = filesize($fn); 
 				$date = date('Y-m-d H:i:s');
-				fwrite($file, ("[".$Type."] ".$Message." ".$date."\r\n")); 
+				$Username = "Undefined User";
+				$user = new CurrentUser();
+				if(isset($_COOKIE['username'])){
+					$Username = $_COOKIE['username'];
+				}
+				$Message1 = str_replace("%userid%",$Username,$Message);
+				fwrite($file, ("[".$Type."]|".$Message1."|".$date."]\r\n"));
 			}else{
 				return "no type set";
 			}
@@ -51,6 +57,7 @@
 	        while($row = mysqli_fetch_array($result)) {	  
 	        	$this->WholeBook = $row;          
 	        	$this->Title = $row['Title'];
+	        	ServerLog("User '%userid%' is pulling information on the book \"".$row['Title']."\"","Book Request");
 	            $this->Description = $row['Description'];
 	            $this->Date = $row['CreationDate'];
 	            $this->Genre1 = $row['Genre1'];
@@ -320,7 +327,6 @@
 	    public $DB_SSID;
 	    // constructor
 	    public function __construct() {
-
 	    	if(isset($_COOKIE['username'])){
 	    		$this->CookieUsername = $_COOKIE['username'];
 	    	}
@@ -381,6 +387,79 @@
 		echo "no data"; 
 	}else{
 		switch($mode){
+			case 'core':
+				switch ($data) {
+					case 'valid_user':
+						if(isset($_COOKIE['username'])&&isset($_COOKIE['ID'])&&isset($_COOKIE['MD5'])){
+				            $md5 = $_COOKIE['MD5'];
+				            global $DBusername,$DBurl,$DBpassword,$DBname;
+				            $mysql_connection = mysqli_connect($DBurl,$DBusername,$DBpassword,$DBname);
+				            $result = mysqli_query($mysql_connection,"SELECT * FROM users WHERE username = '".mysqli_real_escape_string($mysql_connection,$_COOKIE['username'])."' AND ID = '".mysqli_real_escape_string($mysql_connection,$_COOKIE['ID'])."'");
+				            while($row = mysqli_fetch_array($result)) {
+				                if($row['SessionID']==$md5){
+				                    return true;
+				                }
+				            }
+				            logout();
+				            return false;
+				        }else{
+				            logout();
+				            return false;
+				        }
+					break;
+					case 'logout':
+						logout();
+						break;
+					case 'login':
+						if(isset($_POST['username'])||isset($_GET['username'])){
+		                    if(isset($_POST['password'])||isset($_GET['password'])){
+		                        $username = "";
+		                        $password = "";
+		                        if(isset($_POST['username'])){
+		                            $username = $_POST['username'];
+		                        }else if(isset($_GET['username'])){
+		                            $username = $_GET['username'];
+		                        }
+		                        if(isset($_POST['password'])){
+		                            $password = $_POST['password'];
+		                        }else if(isset($_GET['password'])){
+		                            $password = $_GET['password'];
+		                        }
+		                        $mysql_connection2 = mysqli_connect($DBurl,$DBusername,$DBpassword,$DBname);
+		                        $result2 = mysqli_query($mysql_connection2,"SELECT * FROM users WHERE username = '".mysqli_real_escape_string($mysql_connection2,$username)."' AND password = '".mysqli_real_escape_string($mysql_connection2,$password)."'");
+		                        if(mysqli_num_rows($result2)>0){
+		                            $mysql_connection = mysqli_connect($DBurl,$DBusername,$DBpassword,$DBname);
+		                            $result = mysqli_query($mysql_connection,"SELECT * FROM users WHERE username = '".mysqli_real_escape_string($mysql_connection,$username)."'");
+		                            while($row = mysqli_fetch_array($result)) {
+		                                if($row['Verified']!=1){
+		                                    echo 3;
+		                                    return 3;
+		                                }else{
+		                                    setcookie('username',$username,time()+(60*60*24*2));
+		                                    setcookie('ID',$row['ID'],time()+(60*60*24*2));
+		                                    $md5 = unique_md5();
+		                                    setcookie('MD5',$md5,time()+(60*60*24*2));
+		                                    mysqli_query($mysql_connection,"UPDATE users SET SessionID='".$md5."' WHERE ID='".$row['ID']."';");
+		                                    echo 1;
+		                                    return 1;
+		                                }
+		                            }
+		                        }else{
+		                            echo 2;
+		                            return 2;
+		                        }
+		                    }
+		                }
+		                break;
+		            case 'debug':
+		            	echo "o0=====Debug=====0o<br>";
+		            	echo "";
+		            break;
+		            default:
+		            echo "No settings defined";
+		            break;
+			}
+			break;
 		    case 'books':
 				////////////////////Get Request Type/////////////////////////////
 				$method = $_SERVER['REQUEST_METHOD'];
@@ -423,4 +502,17 @@
 		}
 	}
 		
+
+
+	function logout(){
+       if (isset($_SERVER['HTTP_COOKIE'])) {
+            $cookies = explode(';', $_SERVER['HTTP_COOKIE']);
+            foreach($cookies as $cookie) {
+                $parts = explode('=', $cookie);
+                $name = trim($parts[0]);
+                setcookie($name, '', time()-1000);
+                setcookie($name, '', time()-1000, '/');
+            }
+        }
+    }
 ?>
