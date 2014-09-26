@@ -11,7 +11,6 @@ $(document).ready(function(){
 	} else {
 		
 	}
-
 	loadBooks();
 	//Checking if logged in to dertermine if to show head login box or nav
 	$.post(functionPath + "mode=5", function(data) {
@@ -129,6 +128,10 @@ function changeViewTo(newPage) {
 			doSearch(arr[2]);
 			//setLocationHash(newPage + arr[2]);
 		}
+			if(arr[1] = "new"){
+			newBook();
+			
+		}
 
 		currentPage = newPage;
 
@@ -230,6 +233,9 @@ function returnTemplate(filename){
 }
 
 	function doSearch(query){
+		if($("#searchInput").val() == ""){
+			$("#searchInput").val(query);
+		}
 		console.log("the query was" + query);
 	 	var searchQuery = query
 	 	if(searchQuery == ""){

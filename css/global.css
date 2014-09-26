@@ -1,11 +1,8 @@
-html {
-  overflow-y: scroll; }
-
 body {
   background-image: url(../img/bg.png); }
 
 #headerImg {
-  margin-top: -11px; }
+  margin-top: -10px; }
 
 #header {
   position: fixed;
@@ -21,6 +18,9 @@ body {
 
 #pageWrapper {
   margin-top: 110px; }
+
+#loginControls {
+  margin-top: 16px; }
 
 .item h5 {
   margin-left: 5px; }
