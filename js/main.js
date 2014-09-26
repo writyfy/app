@@ -7,7 +7,7 @@ $(document).ready(function(){
 
 	if (window.location.hash != "") {
 		console.log("attempting to load" + window.location.hash.substring(2));
-		changeViewTo(window.location.hash.substring(2));
+		loadHashedPage(window.location.hash.substring(2));
 	} else {
 		
 	}
@@ -21,15 +21,17 @@ $(document).ready(function(){
 		}else if (data == '0'){
 			$("#dynamicHeaderArea").load("html/headerLoggedOut.html");
 			hideUserTab();
-		}else{
+		}else{ 
 			alert("Something went wrong!");
 		}
 	});
 
 	//General Things for handling modals
 	$('#theModal').on('hide.bs.modal', function (e) {
+		setLocationHash("");
 		$('.modal-body').html("");
 		$("html").css("margin-right", "0px");
+
 	});
 	$('#theModal').on('show.bs.modal', function (e) {
 		 $("html").css("margin-right", "-16px");
@@ -64,7 +66,6 @@ $(document).ready(function(){
 	preventScroll("editor");
 
 	//Opens search results, will contain search functions when added in php
-
 
 	//Need to add on enter key pressed
 	$("#btnSearch").click(function(){
@@ -109,29 +110,30 @@ $(document).ready(function(){
 		newBook();
 	});
 
-
-	//loadUserTab();
-		console.log(getLocationHash());
 //End On Doc Ready	
 });
 
 
 //View Control Stuff
 var currentPage	= ""
-function changeViewTo(newPage) {
+function loadHashedPage(newPage) {
 	var arr = newPage.split("/");
 	console.log(arr);
 	console.log("atempting to load: " + newPage);
 	if (currentPage != newPage) {
 		console.log("read as: " + newPage.substring(1,7));
-		if(arr[1] = "search"){
+		if(arr[1] == "search"){
 			doSearch(arr[2]);
 			//setLocationHash(newPage + arr[2]);
 		}
-			if(arr[1] = "new"){
+		else if(arr[1] == "new"){
 			newBook();
 			
 		}
+		else if(arr[1] == "book"){
+			s
+		}
+
 
 		currentPage = newPage;
 
@@ -151,7 +153,7 @@ function setLocationHash(str) {
 }
 window.onhashchange = function(e) {
 	if (allowHashToUpdateApp) {
-		changeViewTo(getLocationHash());
+		loadHashedPage(getLocationHash());
 	} else {
 		allowHashToUpdateApp = true;
 	}
@@ -159,7 +161,7 @@ window.onhashchange = function(e) {
 window.onload = function() {
 	var hashValue = getLocationHash();
 	if (hashValue) {
-		changeViewTo(hashValue);
+		loadHashedPage(hashValue);
 	}
 };
 //
@@ -287,6 +289,7 @@ function returnTemplate(filename){
 	 	}
 	 		//Closes search results
 		$("#btnSearchClose").click(function(){
+			setLocationHash("");
 		 	$("#btnSearchClose").hide();
 		 	$("#searchResults").slideUp("fast",function(){
 		 		isOpen = false;
@@ -340,6 +343,7 @@ function register(username,password){
 }
 
 function settings(userID){
+	setLocationHash("settings");
 	returnTemplate('settings').done(function(data1){
 		$('#theModal').modal("show");
 		$(".modal-body").append(data1);
@@ -367,17 +371,14 @@ function addToBook(title,bookID){
 	$.post(functionPath + "mode=5", function(data) {
 		if(data == '1'){
 			//logged in
-			returnTemplate('editor').done(function(data2){
 				returnTemplate('bookSnippet').done(function(data1){
-				var modalContent = data1 + data2;
 				//setPageTitle("Edit");
 				$('#theModal').modal("show");
-				$(".modal-body").append(modalContent);
-				$("#theModalLabel").html("Contribute")
+				$(".modal-body").append(data1);
+				$("#theModalLabel").html("Contribute");
 				$('.bookTitleContainer').append(title);
 				limitWords("#editor", 200);
 				});
-			});
 		}else if (data == '0'){
 			//not logged 
 			returnTemplate('editor').done(function(data2){
@@ -405,6 +406,7 @@ function addToBook(title,bookID){
 }
 
 function newBook(){
+		setLocationHash("new");
 		returnTemplate('editor').done(function(data2){
 		returnTemplate('newBook').done(function(data1){
 			var modalContent = data1 + data2;
