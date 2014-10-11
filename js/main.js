@@ -1,4 +1,5 @@
 var functionPath = "functions/functions.php?"
+var apiPath = "api.php"
 //Search bs that needs moving out of being a global...
 var lastQuery;
 var isOpen = false;
@@ -127,11 +128,26 @@ function loadHashedPage(newPage) {
 			//setLocationHash(newPage + arr[2]);
 		}
 		else if(arr[1] == "new"){
-			newBook();
+
+				$.post(functionPath + "mode=5", function(data) {
+				if(data == '1'){
+					//logged in
+					newBook();
+				}
+				else if (data == '0'){
+					//not logged 
+					//must be logged in
+					alert("You must be logged in to access this page");
+					setLocationHash("");
+	
+				}else{
+					alert("Something went wrong!")
+				}
+			});
 			
 		}
 		else if(arr[1] == "book"){
-			s
+			
 		}
 
 
@@ -367,37 +383,41 @@ function settings(userID){
 	});
 */
 
-function addToBook(title,bookID){
+function addToBook(bookID){
 	$.post(functionPath + "mode=5", function(data) {
 		if(data == '1'){
+			setLocationHash("book/" + bookID);
 			//logged in
 				returnTemplate('bookSnippet').done(function(data1){
 				//setPageTitle("Edit");
 				$('#theModal').modal("show");
 				$(".modal-body").append(data1);
 				$("#theModalLabel").html("Contribute");
-				$('.bookTitleContainer').append(title);
-				limitWords("#editor", 200);
+				$("#btnContribute").click(function(){
+					console.log("moo");
+					$.getJSON(apiPath + "/books/" + bookID, function(data2){
+						console.log(data2);
+						$("#btnContribute").slideUp("fast", function(){
+							returnTemplate('editor').done(function(data3){
+								$(".panel-body").append(data3);
+							});
+
+						});
+					});
+				});
 				});
 		}else if (data == '0'){
 			//not logged 
-			returnTemplate('editor').done(function(data2){
 				returnTemplate('bookSnippet').done(function(data1){
-					var modalContent = data1 + data2;
 					//setPageTitle("Edit");
 					$('#theModal').modal("show");
-					$(".modal-body").append(modalContent);
+					$(".modal-body").append(data1);
 					$("#theModalLabel").html("Contribute")
-					$('.bookTitleContainer').append(title);
-					limitWords("#editor", 200);
-					$("#editor").attr({
+					$("#btnContribute").attr({
 						disabled: 'true',
-						placeholder: 'Login to contribute!'
 					});
-					$("#btnSnippetSubmit").attr("disabled","true");
 		
 				});
-			});
 		}else{
 			alert("Something went wrong!")
 		}
@@ -407,9 +427,7 @@ function addToBook(title,bookID){
 
 function newBook(){
 		setLocationHash("new");
-		returnTemplate('editor').done(function(data2){
 		returnTemplate('newBook').done(function(data1){
-			var modalContent = data1 + data2;
 			//setPageTitle("Edit");
 			$('#theModal').modal("show");
 			$('#theModal').on('shown.bs.modal', function () {
@@ -420,12 +438,12 @@ function newBook(){
 			  	step : 50
 			  	});
 			});
-			$(".modal-body").append(modalContent);
+			$(".modal-body").append(data1);
 			$("#theModalLabel").html("New");
 			limitWords("#editor", 3);
 
 		});
-	});
+
 }
 
 function readBook(title,bookID){
@@ -502,8 +520,8 @@ function loadUserBooks(){
 
 				$('.bookTitle').tooltip({container: 'body'});
 				$("div .bookCompleted").click(function(){
-					var bookTitle = ($(this).find(".bookTitle").html());
-					readBook(bookTitle);
+				var bookID = ($(this).attr('id'));
+				addToBook(bookID);
 				});
 			} else{
 				console.log("No books");
@@ -535,8 +553,8 @@ function loadBooks(){
 
 			$('.bookTitle').tooltip({container: 'body'});
 			$("div .bookCompleted").click(function(){
-				var bookTitle = ($(this).find(".bookTitle").html());
-				readBook(bookTitle);
+			var bookID = ($(this).attr('id'));
+				addToBook(bookID);
 			});
 		} else{
 			console.log("No books");
@@ -548,7 +566,7 @@ function loadBooks(){
 		for (var i = 0; i < data.length; i++){
 			var book = data[i];
 			var postContent = ''
-		 	postContent+= '<div class="item bookInProgress" style="width=100%;">';
+		 	postContent+= '<div class="item bookInProgress" id="' + book.ID +'" style="width=100%;">';
 			postContent+= '<a id="bookCover"><img class="lazyOwl" style="width:150px;height:200px;" data-src="' + book.BookCoverLocation + '"></a>';
 			postContent+= '<div class="imgOverlay">';
 			postContent+= '<p class="bookTitle" data-placement="bottom" data-toggle="tooltip" title="' + book.Description + '">' + book.Title+ '</p>';
@@ -566,8 +584,8 @@ function loadBooks(){
 		
 			$('.bookTitle').tooltip({container: 'body'});
 			$("div .bookInProgress").click(function(){
-				var bookTitle = ($(this).find(".bookTitle").html());
-				addToBook(bookTitle);
+				var bookID = ($(this).attr('id'));
+				addToBook(bookID);
 			});
 
 		}else{
