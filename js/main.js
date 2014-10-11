@@ -86,6 +86,7 @@ $(document).ready(function(){
 		}
 	});
 
+
 	//The dynamic area requires .on apposed to .click to select the button
 	$("#dynamicHeaderArea").on("click","#btnLogin",function(e){
 		LogIn();
@@ -264,12 +265,29 @@ function returnTemplate(filename){
 	 		//Space for validation
 	 	}else{
 	 		//Something prettier needs doing here
-	 		$(".row").html("");
-	 		$("#searchResults").slideDown("fast",function(){
-	 			isOpen = true
-	 			$("#btnSearchClose").show();
-	 			console.log("Query accepted will search");
-	 			lastQuery = searchQuery;
+
+			returnTemplate("searchTab").done(function(data1){
+		$(".tab-content").append(data1);
+
+
+		$('#tabs').append("<li style='display:none;' id='tbSearch'><a href='#tabSearch' data-toggle='tab'><button class='close closeTab' id='closeSearch' type='button'> x </button>Search: " + query + "</a></li>");
+		//Was gonna use slideUp here but it doesnt work due to positioning.
+		$("#tbSearch").fadeIn(function(){
+			$('#tbSearch a[href="#tabSearch"]').tab('show');
+				$("#closeSearch").click(function(){
+					console.log('moo');
+					$('#tbInProgress a[href="#tabInProgress"]').tab('show');
+					$("#tbSearch").fadeOut(function(){
+						$("#tbSearch").remove();
+					});
+				});
+						
+
+
+		});
+	});
+
+
 	 			//show results of search here
 	 		$.getJSON(functionPath + "mode=15&Data=" + searchQuery, function(data) {
 			if (data.length > 0){
@@ -301,7 +319,7 @@ function returnTemplate(filename){
 			}
 			setLocationHash("search/" + query);
 		});
-	 		});
+	
 	 	}
 	 		//Closes search results
 		$("#btnSearchClose").click(function(){
@@ -464,6 +482,8 @@ function readBook(title,bookID){
 	/* OLD
 
 */
+
+
 //This needs to happen after the user has loggen in
 function loadUserTab(logging){
 	returnTemplate("userTab").done(function(data1){
