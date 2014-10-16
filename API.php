@@ -31,6 +31,93 @@
 			return "no message";
 		}
 	}
+	class Likes{
+		public $result;
+		public function __construct($ID) {	
+	    	$this->ID = $ID;
+			global $DBusername,$DBurl,$DBpassword,$DBname;
+	        $mysql_connection = mysqli_connect($DBurl,$DBusername,$DBpassword,$DBname);
+	        $result = mysqli_query($mysql_connection,"SELECT * FROM likes WHERE BookID = '".mysqli_real_escape_string($mysql_connection,$ID)."'");
+	        $this->result = $result;
+	    }
+	    public function getLikes(){
+	    	return mysqli_num_rows($this->result);
+	    }
+	    public function setLike(){
+	    	$user = new CurrentUser();
+	    	if($user->isLoggedIn()){
+	    		$alreadyLiked = false;
+	    		while($row = mysqli_fetch_array($this->result)){
+	    			if($row['UserID']==$user->getCookieID()){
+	    				$alreadyLiked = true;
+	    			}
+	    		}
+	    		if($alreadyLiked){
+	    			return;
+	    		}else{
+	    			self::DBConnect("likes",$this->ID,$user->getCookieID());
+	    		}
+	    	}else{
+	    		echo "not logged in";
+	    	}
+	    }
+	    private function DBConnect($coloum,$BookID,$UserID){
+	    	global $DBusername,$DBurl,$DBpassword,$DBname;
+	        $mysql_connection = mysqli_connect($DBurl,$DBusername,$DBpassword,$DBname);
+	        $result = mysqli_query($mysql_connection,"INSERT INTO ".$coloum." (BookID,UserID) VALUES (".$BookID.",".$UserID.")");
+	    }
+	}
+
+	class Notifications{
+		public $result;
+		public $ID;
+
+		public function __construct($Limit) {	
+			if(isset($_COOKIE['ID'])){
+				$this->ID = $_COOKIE['ID'];
+			}else{
+				return;
+			}
+			global $DBusername,$DBurl,$DBpassword,$DBname;
+	        $mysql_connection = mysqli_connect($DBurl,$DBusername,$DBpassword,$DBname);
+	        $result = mysqli_query($mysql_connection,"SELECT * FROM notifications WHERE PrimaryUser = '".mysqli_real_escape_string($mysql_connection,$_COOKIE['ID'])."' LIMIT ".$Limit);
+	        $this->result = $result;
+	    }
+	    public function constructNotifications(){
+	    	$notifications = array();
+	    	$notificationArray = array();
+	    	while($row = mysqli_fetch_array($this->result)){
+	    		if($row['PrimaryUser']==$this->ID){
+	    			$user = new User($row['SecondaryUser']);
+	    			$username = $user->getUsername();
+	    			$bookname = "";
+	    			if($row['BookID']!=0){
+	    				$book = new Book($row['BookID']);
+	    				$bookname = $book->getTitle();
+	    			}
+	    			$notifications[] = self::stringCrafter($row['NotificationType'],$username,$bookname);
+	    		}
+	    	}
+	        print json_encode($notifications);
+	    }
+	    public function stringCrafter($ID, $username, $book){
+	    	switch($ID){
+	    		case 1:
+	    			return $username." Liked your book ".$book;
+	    			break;
+	    		case 2:
+	    			return $username." Followed you";
+	    			break;
+	    		case 3:
+	    			return $username." Liked your book ".$book;
+	    			break;
+	    		case 4:
+	    			return $username." Has contributed to your book ".$book;
+	    			break;
+	    	}
+	    }
+	}
+
 	class Book {
 	    // define properties
 	    public $ID;
@@ -331,7 +418,7 @@
 	    		$this->CookieUsername = $_COOKIE['username'];
 	    	}
 	    	if(isset($_COOKIE['MD5'])){
-	    		$this->CokkieSSID = $_COOKIE['MD5'];
+	    		$this->CookieSSID = $_COOKIE['MD5'];
 	    	}
 	    	if(isset($_COOKIE['ID'])){
 	    		$this->CookieID = $_COOKIE['ID'];
@@ -341,6 +428,13 @@
 		        while($row = mysqli_fetch_array($result)) {
 		        	$this->DB_SSID = $row['SessionID'];
 		        }
+	    	}
+	    }
+	    public function isLoggedIn(){
+	    	if(isset($_COOKIE['username'])&&isset($_COOKIE['ID'])&&self::isSSIDCorrect()){
+	    		return true;
+	    	}else{
+	    		return false;
 	    	}
 	    }
 	    //Get
@@ -370,6 +464,10 @@
 	        $result = mysqli_query($mysql_connection,"UPDATE users SET ".$coloum."='".mysqli_real_escape_string($mysql_connection,$value)."' WHERE ID = '".mysqli_real_escape_string($mysql_connection,$ID)."'");
 	    }
 	}
+	function unique_md5() {
+         mt_srand(microtime(true)*100000 + memory_get_usage(true));
+         return md5(uniqid(mt_rand(), true));
+     }
 	//$a = new User(1);
 	//$a->setUsername("JohnGreen");
 	//echo $a->getUsername();
@@ -389,26 +487,123 @@
 		switch($mode){
 			case 'core':
 				switch ($data) {
+					case 'notifications':
+						$data2 = array_shift($elements);
+						if($data2!=""){
+							$notifications = new Notifications($data2);
+							$notifications->constructNotifications();
+						}
+						break;
+					case 'register':
+						//register
+		                $Username = "";
+		                $Email = "";
+		                $DOB;
+		                $Password1 = "";
+		                $Password2 = "";
+		                $FirstName = "";
+		                $LastName = "";
+		                if(isset($_POST['Username'])&&$_POST['Username']!=""){
+		                    $Username = $_POST['Username'];
+		                }else if(isset($_GET['Username'])){
+		                    $Username = $_GET['Username'];
+		                }else{
+		                    echo 0;
+		                    return;
+		                }
+		                if(isset($_POST['Email'])&&$_POST['Email']!=""){
+		                    $Email = $_POST['Email'];
+		                }else if(isset($_GET['Email'])){
+		                    $Email = $_GET['Email'];
+		                }else{
+		                    echo 1;
+		                    return;
+		                }
+		                if(isset($_POST['DOB'])&&$_POST['DOB']!=""){
+		                    $DOB = $_POST['DOB'];
+		                }else if(isset($_GET['DOB'])){
+		                    $DOB = $_GET['DOB'];
+		                }else{
+		                    echo 2;
+		                    return;
+		                }
+		                if(isset($_POST['Password1'])&&$_POST['Password1']!=""){
+		                    $Password1 = $_POST['Password1'];
+		                }else if(isset($_GET['Password1'])){
+		                    $Password1 = $_GET['Password1'];
+		                }else{
+		                    echo 3;
+		                    return;
+		                }
+		                if(isset($_POST['Password2'])&&$_POST['Password2']!=""){
+		                    $Password2 = $_POST['Password2'];
+		                }else if(isset($_GET['Password2'])){
+		                    $Password2 = $_GET['Password2'];
+		                }else{
+		                    echo 4;
+		                    return;
+		                }
+		                if(isset($_POST['FirstName'])&&$_POST['FirstName']!=""){
+		                    $FirstName = $_POST['FirstName'];
+		                }else if(isset($_GET['FirstName'])){
+		                    $FirstName = $_GET['FirstName'];
+		                }else{
+		                    echo 5;
+		                    return;
+		                }
+		                if(isset($_POST['LastName'])&&$_POST['LastName']!=""){
+		                    $LastName = $_POST['LastName'];
+		                }else if(isset($_GET['LastName'])){
+		                    $LastName = $_GET['LastName'];
+		                }else{
+		                    echo 6;
+		                    return;
+		                }
+		                if($Password1 != $Password2){
+		                    echo 7;
+		                    return;
+		                }
+		                if(usernameEgsists($Username)){
+		                    echo 8;
+		                    return;
+		                }
+		                if(emailEgsists($Email)){
+		                    echo 9;
+		                    return;
+		                }
+		                global $DBusername,$DBurl,$DBpassword,$DBname;
+		                $md5 = unique_md5();
+		                sendEmail("Welcome to Writyfy",$Email,"From: No-Reply@Writyfy.com","Welcome to Writyfy, please use the following link to verify your account!<br>".$md5);
+		                $mysql_connection = mysqli_connect($DBurl,$DBusername,$DBpassword,$DBname);
+		                $result = mysqli_query($mysql_connection,"INSERT INTO users (Username,Email,DOB,Password,FirstName,LastName,EmailMD5) VALUES ('".mysqli_real_escape_string($mysql_connection,$Username)."','".mysqli_real_escape_string($mysql_connection,$Email)."','".mysqli_real_escape_string($mysql_connection,$DOB)."','".mysqli_real_escape_string($mysql_connection,$Password1)."','".mysqli_real_escape_string($mysql_connection,$FirstName)."','".mysqli_real_escape_string($mysql_connection,$LastName)."','".mysqli_real_escape_string($mysql_connection,$md5)."');");
+		                echo 10; 
+		                return;
 					case 'valid_user':
 						if(isset($_COOKIE['username'])&&isset($_COOKIE['ID'])&&isset($_COOKIE['MD5'])){
 				            $md5 = $_COOKIE['MD5'];
 				            global $DBusername,$DBurl,$DBpassword,$DBname;
 				            $mysql_connection = mysqli_connect($DBurl,$DBusername,$DBpassword,$DBname);
 				            $result = mysqli_query($mysql_connection,"SELECT * FROM users WHERE username = '".mysqli_real_escape_string($mysql_connection,$_COOKIE['username'])."' AND ID = '".mysqli_real_escape_string($mysql_connection,$_COOKIE['ID'])."'");
+				            $valid = false;
 				            while($row = mysqli_fetch_array($result)) {
 				                if($row['SessionID']==$md5){
-				                    return true;
+				                	echo "1";
+				                	$valid = true;
 				                }
 				            }
-				            logout();
-				            return false;
+				            if(!$valid){
+				            	logout();
+				            	echo "0";
+				            }
+				            
 				        }else{
 				            logout();
-				            return false;
+				            echo "0";
 				        }
 					break;
 					case 'logout':
 						logout();
+						echo 1;
 						break;
 					case 'login':
 						if(isset($_POST['username'])||isset($_GET['username'])){
@@ -433,22 +628,23 @@
 		                            while($row = mysqli_fetch_array($result)) {
 		                                if($row['Verified']!=1){
 		                                    echo 3;
-		                                    return 3;
 		                                }else{
-		                                    setcookie('username',$username,time()+(60*60*24*2));
-		                                    setcookie('ID',$row['ID'],time()+(60*60*24*2));
+		                                    setcookie('username',$username,time()+(60*60*24*2), '/');
+		                                    setcookie('ID',$row['ID'],time()+(60*60*24*2), '/');
 		                                    $md5 = unique_md5();
-		                                    setcookie('MD5',$md5,time()+(60*60*24*2));
+		                                    setcookie('MD5',$md5,time()+(60*60*24*2), '/');
 		                                    mysqli_query($mysql_connection,"UPDATE users SET SessionID='".$md5."' WHERE ID='".$row['ID']."';");
 		                                    echo 1;
-		                                    return 1;
 		                                }
 		                            }
 		                        }else{
 		                            echo 2;
-		                            return 2;
 		                        }
+		                    }else{
+		                    	echo 2;
 		                    }
+		                }else{
+		                	echo 2;
 		                }
 		                break;
 		            case 'debug':
@@ -493,8 +689,101 @@
 				    break;
 				}
 		        break;
+		    case 'search':
+		    	switch($data){
+		    		case 'r':
+		    		//random
+		    			$data2 = array_shift($elements);
+		    			switch($data2){
+		    				case 'c':
+		    					//compleate
+		    					$data2 = array_shift($elements);
+				                $mysql_connection = mysqli_connect($DBurl,$DBusername,$DBpassword,$DBname);
+				                $result = mysqli_query($mysql_connection,"SELECT * FROM books WHERE Status = '2'");
+				                $rows = array();
+				                while($r = mysqli_fetch_array($result)) {
+				                	$array1 = $r;
+				                	$likes = new Likes($r['ID']);
+				                	$array1['Likes'] =  $likes->getLikes();
+				                	$rows[] = $array1;
+				                }
+				                print json_encode($rows);
+				                break;
+		    				case 'n':
+		    					//not started
+		    					$data2 = array_shift($elements);
+				                $mysql_connection = mysqli_connect($DBurl,$DBusername,$DBpassword,$DBname);
+				                $result = mysqli_query($mysql_connection,"SELECT * FROM books WHERE Status ='0'");
+				                $rows = array();
+				                while($r = mysqli_fetch_array($result)) {
+				                	$array1 = $r;
+				                	$likes = new Likes($r['ID']);
+				                	$array1['Likes'] =  $likes->getLikes();
+				                	$rows[] = $array1;
+				                }
+				                print json_encode($rows);
+				                break;
+		    				case 'w':
+		    					//in progress
+			    				$data2 = array_shift($elements);
+				                $mysql_connection = mysqli_connect($DBurl,$DBusername,$DBpassword,$DBname);
+				                $result = mysqli_query($mysql_connection,"SELECT * FROM books WHERE Status = '1'");
+				                $rows = array();
+				                while($r = mysqli_fetch_array($result)) {
+				                	$array1 = $r;
+				                	$likes = new Likes($r['ID']);
+				                	$array1['Likes'] =  $likes->getLikes();
+				                	$rows[] = $array1;
+				                }
+				                print json_encode($rows);
+				                break;
+		    			}
+		    		break;
+		    		case 'user':
+		    		//gets users books, example /user/1/r/c
+		    			$data2 = array_shift($elements);
+		    			if($data2==-1){
+		    				$user = new CurrentUser();
+		    				if(isset($_COOKIE['ID'])&&$user->isLoggedIn()){
+		    					$mysql_connection = mysqli_connect($DBurl,$DBusername,$DBpassword,$DBname);
+				                $result = mysqli_query($mysql_connection,"SELECT * FROM books WHERE UserID = '".mysqli_real_escape_string($mysql_connection,$_COOKIE['ID'])."'");
+				                $rows = array();
+				                while($r = mysqli_fetch_array($result)) {
+				                    $rows[] = $r;
+				                }
+				                print json_encode($rows);
+		    				}
+		    			}else{
+		    				$mysql_connection = mysqli_connect($DBurl,$DBusername,$DBpassword,$DBname);
+			                $result = mysqli_query($mysql_connection,"SELECT * FROM books WHERE UserID = '".mysqli_real_escape_string($mysql_connection,$data2)."'");
+			                $rows = array();
+			                while($r = mysqli_fetch_array($result)) {
+			                    $rows[] = $r;
+			                }
+			                print json_encode($rows);
+		    			}
+		                
+		    		break;
+		    		case 'field':
+		    			//serch bar
+		    		    $data2 = array_shift($elements);
+		                $mysql_connection = mysqli_connect($DBurl,$DBusername,$DBpassword,$DBname);
+		                $result = mysqli_query($mysql_connection,"SELECT * FROM books WHERE Title Like '%".mysqli_real_escape_string($mysql_connection,$data2)."%' 
+		                    OR Description Like '%".mysqli_real_escape_string($mysql_connection,$data2)."%'
+		                    OR Genre1 Like '%".mysqli_real_escape_string($mysql_connection,$data2)."%'
+		                    OR Genre2 Like '%".mysqli_real_escape_string($mysql_connection,$data2)."%'
+		                    OR Genre3 Like '%".mysqli_real_escape_string($mysql_connection,$data2)."%'
+		                    OR CreatorsUsername Like '%".mysqli_real_escape_string($mysql_connection,$data2)."%'");
+		                $rows = array();
+		                while($r = mysqli_fetch_array($result)) {
+		                    $rows[] = $r;
+		                }
+		                print json_encode($rows);
+		    		break;
+		    	}
+		    	break;
 		    case 'user':
-
+		    	
 		    	break;
 		    default:
 		    echo "default";
@@ -505,6 +794,12 @@
 
 
 	function logout(){
+		
+		if(isset($_COOKIE['username'])){
+			ServerLog("Logging out %userid%","Logging out");
+		}else{
+			ServerLog("Logging out unknowen user","Logging out");
+		}
        if (isset($_SERVER['HTTP_COOKIE'])) {
             $cookies = explode(';', $_SERVER['HTTP_COOKIE']);
             foreach($cookies as $cookie) {
@@ -513,6 +808,29 @@
                 setcookie($name, '', time()-1000);
                 setcookie($name, '', time()-1000, '/');
             }
+        }
+    }
+    function sendEmail($subject,$res,$headers,$content){
+        mail($res, $subject, $content, $headers);
+    }
+    function usernameEgsists($username){
+        global $DBusername,$DBurl,$DBpassword,$DBname;
+        $mysql_connection = mysqli_connect($DBurl,$DBusername,$DBpassword,$DBname);
+        $result = mysqli_query($mysql_connection,"SELECT * FROM users WHERE Username = '".mysqli_real_escape_string($mysql_connection,$username)."'");
+        if(mysqli_num_rows($result)>0){
+            return true;
+        }else{
+            return false;
+        }
+    }
+    function emailEgsists($email){
+        global $DBusername,$DBurl,$DBpassword,$DBname;
+        $mysql_connection = mysqli_connect($DBurl,$DBusername,$DBpassword,$DBname);
+        $result = mysqli_query($mysql_connection,"SELECT * FROM users WHERE Email = '".mysqli_real_escape_string($mysql_connection,$email)."'");
+        if(mysqli_num_rows($result)>0){
+            return true;
+        }else{
+            return false;
         }
     }
 ?>

@@ -14,9 +14,10 @@ $(document).ready(function(){
 	}
 	loadBooks();
 	//Checking if logged in to dertermine if to show head login box or nav
-	$.post(functionPath + "mode=5", function(data) {
+	$.post(apiPath + "/core/valid_user/", function(data) {
 		if(data == '1'){
 			$("#dynamicHeaderArea").load("html/headerLoggedIn.html");
+			loadNotifications();
 			loadUserTab();
 			loadUserBooks();
 		}else if (data == '0'){
@@ -107,6 +108,9 @@ $(document).ready(function(){
 	$("#dynamicHeaderArea").on("click","#btnNew",function(){
 		newBook();
 	});
+	$("#dynamicHeaderArea").on("click","#btnNotifcations",function(){
+		loadNotifications();
+	});
 
 	$(".tab-content").on("click","#btnNoBookMakeNew",function(){
 		newBook();
@@ -130,7 +134,7 @@ function loadHashedPage(newPage) {
 		}
 		else if(arr[1] == "new"){
 
-				$.post(functionPath + "mode=5", function(data) {
+				$.post(apiPath + "/core/valid_user/", function(data) {
 				if(data == '1'){
 					//logged in
 					newBook();
@@ -184,7 +188,7 @@ window.onload = function() {
 //
 
 function LogIn(){
-	$.post(functionPath + "mode=5", function(data) {
+	$.post(apiPath + "/core/valid_user/", function(data) {
 		if(data == '1'){
 			alert("Already logged in!")
 		}else if (data == '0'){
@@ -193,7 +197,7 @@ function LogIn(){
 			var passwordVal = $("#passwordInput").val();
 			$.ajax({
 				type: "POST",
-				url: functionPath + "mode=4",
+				url: apiPath + "/core/login/",
 				data: { username: usernameVal, password: passwordVal},
 				success: function (data1) {
 					console.log(data1);
@@ -222,9 +226,9 @@ function LogIn(){
 	});
 }
 function logOut(){
-	$.post(functionPath + "mode=5", function(data) {
+	$.post(apiPath + "/core/valid_user/", function(data) {
 		if(data == '1'){
-			$.post(functionPath + "mode=3",function(data){
+			$.post(apiPath + "/core/logout/",function(data){
 				switch(data){
 					case "0":
 						alert("Logout Failed");
@@ -270,12 +274,12 @@ function returnTemplate(filename){
 		$(".tab-content").append(data1);
 
 
-		$('#tabs').append("<li style='display:none;' id='tbSearch'><a href='#tabSearch' data-toggle='tab'><button class='close closeTab' id='closeSearch' type='button'> x </button>Search: " + query + "</a></li>");
+		$('#tabs').append("<li style='display:none;' id='tbSearch'><a href='#tabSearch' data-toggle='tab'><button class='close closeTab' id='closeSearch' type='button'>x</button>Search: " + query + "</a></li>");
 		//Was gonna use slideUp here but it doesnt work due to positioning.
 		$("#tbSearch").fadeIn(function(){
 			$('#tbSearch a[href="#tabSearch"]').tab('show');
 				$("#closeSearch").click(function(){
-					console.log('moo');
+					setLocationHash("");
 					$('#tbInProgress a[href="#tabInProgress"]').tab('show');
 					$("#tbSearch").fadeOut(function(){
 						$("#tbSearch").remove();
@@ -289,7 +293,7 @@ function returnTemplate(filename){
 
 
 	 			//show results of search here
-	 		$.getJSON(functionPath + "mode=15&Data=" + searchQuery, function(data) {
+	 		$.getJSON(apiPath + "/search/field/" + searchQuery, function(data) {
 			if (data.length > 0){
 			for (var i = 0; i < data.length; i++){
 				var book = data[i];
@@ -356,16 +360,46 @@ function register(username,password){
 		var pass2 = $("#registerConPassword").val();
 		$.ajax({
 		  type: "POST",
-		  url: functionPath + "mode=10",
+		  url: apiPath + "/core/register/",
 		  data: { Username: username, Password1: pass1, Password2: pass2, DOB: dob, Email: email, FirstName: fname, LastName: lname},
 		  success: function (data1) {
             console.log(data1);
 	            switch(data1){
+	            	case "0":
+	            		alert("Please enter a Username");
+	            		break
+	            	case "1":
+	            		alert("Please enter a Email");
+						break;
+	            	case "2":
+	            		alert("Please enter a DOB");
+						break;
+	            	case "3":
+	            		alert("Please enter the first password");
+						break;
+	            	case "4":
+	            		alert("Please enter the seccond password");
+						break;
+	            	case "5":
+	            		alert("Please enter a first name");
+						break;
+	            	case "6":
+	            		alert("Please enter a last name");
+						break;
+	            	case "7":
+	            		alert("Passwords do not match!");
+						break;
+	            	case "8":
+	            		alert("This username already exist");
+						break;
+	            	case "9":
+	            		alert("This email already exist");
+						break;
 					case "10" :
-						alert("Check your email for a verification email!")
+						alert("Check your email for a verification email!");
 						break;
 					default:
-						alert("Something went wrong!")
+						alert("Something went wrong!");
 				}
             }
 		});
@@ -402,7 +436,7 @@ function settings(userID){
 */
 
 function addToBook(bookID){
-	$.post(functionPath + "mode=5", function(data) {
+	$.post(apiPath + "/core/valid_user/", function(data) {
 		if(data == '1'){
 			setLocationHash("book/" + bookID);
 			//logged in
@@ -464,6 +498,22 @@ function newBook(){
 
 }
 
+function loadNotifications(){
+		$.getJSON(apiPath + "/core/notifications/5", function(data) {
+			if (data.length > 1){
+				var postContent = ''
+				for (var i = 0; i < data.length; i++){
+					var note = data[i];
+					postContent += '<li role="presentation"><a role="menuitem" tabindex="-1" href="#">' + note + '</a></li>';
+					//$("#btnNotifcations").addItem(postContent);
+				}
+				$("#btnNotifcations").html(postContent);
+			} else{
+				console.log("No Notifications");
+
+			}
+		});
+}
 function readBook(title,bookID){
 	returnTemplate('book').done(function(data1){
 		$('#theModal').modal("show");
@@ -517,11 +567,39 @@ function hideUserTab(){
 }
 
 function setPageTitle(title){
-	$(document).prop('title', 'Writyfy ' + title);
+		$.getJSON(apiPath + "/search/user/-1", function(data) {
+			if (data.length > 1){
+			for (var i = 0; i < data.length; i++){
+				var book = data[i];
+				var postContent = ''
+				postContent += '<div class="item bookCompleted" style="width=100%;">';
+				postContent += '<a id="bookCover"><img style="width:150px;height:200px;" src=' + book.BookCoverLocation + '></a>';
+				postContent += '<div class="imgOverlay">';
+				postContent +=	'<p class="bookTitle" data-placement="bottom" data-toggle="tooltip" title="' + book.Description +'">' + book.Title + '</p>';
+				postContent +=	'</div>';
+				postContent +=	'</div>';
+				$("#owl-userAllBooks").data('owlCarousel').addItem(postContent);
+				$("#owl-userCompleted").data('owlCarousel').addItem(postContent);
+				$("#owl-userNearingCompletion").data('owlCarousel').addItem(postContent);
+			}
+						//Initialize tooltip for booktitles and set the container to body so that it fills the full area
+
+				$('.bookTitle').tooltip({container: 'body'});
+				$("div .bookCompleted").click(function(){
+				var bookID = ($(this).attr('id'));
+				addToBook(bookID);
+				});
+			} else{
+				console.log("No books");
+				$('#tabUser .well').html("<h3>Oh noes, you have no books! Create a <a id='btnNoBookMakeNew' class='btn btn-primary btn-xs'> New Book</a> </h3>");
+
+			}
+		});
+
 }
 
 function loadUserBooks(){
-		$.getJSON(functionPath + "mode=1&UserID=-1", function(data) {
+		$.getJSON(apiPath + "/search/user/-1", function(data) {
 			if (data.length > 1){
 			for (var i = 0; i < data.length; i++){
 				var book = data[i];
@@ -554,17 +632,23 @@ function loadUserBooks(){
 
 
 function loadBooks(){
-	$.getJSON(functionPath + "mode=1&Data=2", function(data) {
+	$.getJSON(apiPath + "/search/r/c", function(data) {
 		if (data){
 		for (var i = 0; i < data.length; i++){
 			var book = data[i];
 			var postContent = ''
-			postContent += '<div class="item bookCompleted" style="width=100%;">';
-			postContent += '<a id="bookCover"><img class="lazyOwl" style="width:150px;height:200px;" data-src=' + book.BookCoverLocation + '></a>';
-			postContent += '<div class="imgOverlay">';
-			postContent +=	'<p class="bookTitle" data-placement="bottom" data-toggle="tooltip" title="' + book.Description +'">' + book.Title + '</p>';
-			postContent +=	'</div>';
-			postContent +=	'</div>';
+			postContent+= '<div class="item bookInProgress" id="' + book.ID +'" style="width=100%;">';
+			postContent+= '<a id="bookCover"><img class="lazyOwl" style="width:150px;height:200px;" data-src="' + book.BookCoverLocation + '"></a>';
+			postContent+= '<div class="imgOverlay">';
+			postContent+= '<p class="bookTitle" data-placement="bottom" data-toggle="tooltip" title="' + book.Description + '">' + book.Title+ '</p>';
+			postContent+= '<span class="badge">83%</span>';
+			postContent+=	'</div>';
+			postContent+=	'<h5 ><i class="fa fa-user"></i> ' + book.CreatorsUsername + '</h5>';
+			postContent+= '<h5 ><i class="fa fa-users"></i> ' + book.Likes + ' </h5>';
+			postContent+= '<h5><span class="badge" id="genre">' + book.Genre1 + '</span>';
+			postContent+= '<span class="badge" id="genre">' + book.Genre2 + '</span>';
+			postContent+= '<span class="badge" id="genre">' + book.Genre3 + '</span></h5>';
+			postContent+=	'</div>';
 			$("#owl-featuredBooks").data('owlCarousel').addItem(postContent);
 			$("#owl-recentlyCompleted").data('owlCarousel').addItem(postContent);
 			$("#owl-topRated").data('owlCarousel').addItem(postContent);
@@ -581,7 +665,7 @@ function loadBooks(){
 		}
 
 	});
-	$.getJSON(functionPath + "mode=1&Data=1", function(data) {
+	$.getJSON(apiPath + "/search/r/w", function(data) {
 		if(data){
 		for (var i = 0; i < data.length; i++){
 			var book = data[i];
@@ -592,9 +676,11 @@ function loadBooks(){
 			postContent+= '<p class="bookTitle" data-placement="bottom" data-toggle="tooltip" title="' + book.Description + '">' + book.Title+ '</p>';
 			postContent+= '<span class="badge">83%</span>';
 			postContent+=	'</div>';
-			postContent+=	'<h5 ><i class="fa fa-user"></i> moooo</h5>';
-			postContent+= '<h5 ><i class="fa fa-users"></i> 502</h5>';
-			postContent+= '<h5><span class="badge">' + book.Genre1 + '</span></h5>';
+			postContent+=	'<h5 ><i class="fa fa-user"></i> ' + book.CreatorsUsername + '</h5>';
+			postContent+= '<h5 ><i class="fa fa-users"></i> ' + book.Likes + ' </h5>';
+			postContent+= '<h5><span class="badge" id="genre">' + book.Genre1 + '</span>';
+			postContent+= '<span class="badge" id="genre">' + book.Genre2 + '</span>';
+			postContent+= '<span class="badge" id="genre">' + book.Genre3 + '</span></h5>';
 			postContent+=	'</div>';
 			$("#owl-newlyStarted").data('owlCarousel').addItem(postContent);
 			$("#owl-recentlyUpdated").data('owlCarousel').addItem(postContent);
