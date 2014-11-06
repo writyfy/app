@@ -1,8 +1,11 @@
+html {
+  overflow-y: scroll; }
+
 body {
   background-image: url(../img/bg.png); }
 
 #headerImg {
-  margin-top: -10px; }
+  margin-top: -11px; }
 
 #header {
   position: fixed;
@@ -19,9 +22,11 @@ body {
 #pageWrapper {
   margin-top: 110px; }
 
-#loginControls {
-  margin-top: 16px; }
 
+.bigModal{
+   width:940px;
+   margin-left:-470px;
+}
 .item h5 {
   margin-left: 5px; }
 .item .imgOverlay p {
@@ -84,6 +89,26 @@ body {
 #btnSeachClose {
   color: red; }
 
-.nav-tabs > li .close {
-  margin: -2px 0 0 10px;
-  font-size: 18px; }
+.bookReadStyle {
+    width: 90%;
+    background: none;
+    background-color: green;
+}
+.bookCover {
+  border: none;
+  color: black;
+}
+.bookCoverBack {
+  border: none;
+  background: url('../img/leather_cover.png') !important;
+  color: black;
+  position: relative;
+  text-align: center;
+}
+.pageCover {
+  border: none;
+  background-color: white;
+  color: black;
+  position: relative;
+  text-align: center;
+}

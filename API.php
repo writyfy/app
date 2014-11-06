@@ -85,9 +85,9 @@
 	    }
 	    public function constructNotifications(){
 	    	$notifications = array();
-	    	$notificationArray = array();
 	    	while($row = mysqli_fetch_array($this->result)){
 	    		if($row['PrimaryUser']==$this->ID){
+	    			$notificationArray = array();
 	    			$user = new User($row['SecondaryUser']);
 	    			$username = $user->getUsername();
 	    			$bookname = "";
@@ -95,7 +95,11 @@
 	    				$book = new Book($row['BookID']);
 	    				$bookname = $book->getTitle();
 	    			}
-	    			$notifications[] = self::stringCrafter($row['NotificationType'],$username,$bookname);
+	    			$notificationArray["Message"] = self::stringCrafter($row['NotificationType'],$username,$bookname);
+	    			$notificationArray["BookID"] = $row['BookID'];
+	    			$notificationArray["Mode"] = $row['NotificationType'];
+	    			$notificationArray["UserID"] = $row['SecondaryUser'];
+	    			$notifications[] = $notificationArray;
 	    		}
 	    	}
 	        print json_encode($notifications);
@@ -487,6 +491,11 @@
 		switch($mode){
 			case 'core':
 				switch ($data) {
+					case 'username':
+						if(isset($_COOKIE['username'])){
+							echo $_COOKIE['username'];
+						}
+					break;
 					case 'notifications':
 						$data2 = array_shift($elements);
 						if($data2!=""){
@@ -699,7 +708,7 @@
 		    					//compleate
 		    					$data2 = array_shift($elements);
 				                $mysql_connection = mysqli_connect($DBurl,$DBusername,$DBpassword,$DBname);
-				                $result = mysqli_query($mysql_connection,"SELECT * FROM books WHERE Status = '2'");
+				                $result = mysqli_query($mysql_connection,"SELECT * FROM books WHERE Status = '2' ORDER BY RAND()");
 				                $rows = array();
 				                while($r = mysqli_fetch_array($result)) {
 				                	$array1 = $r;
@@ -713,7 +722,7 @@
 		    					//not started
 		    					$data2 = array_shift($elements);
 				                $mysql_connection = mysqli_connect($DBurl,$DBusername,$DBpassword,$DBname);
-				                $result = mysqli_query($mysql_connection,"SELECT * FROM books WHERE Status ='0'");
+				                $result = mysqli_query($mysql_connection,"SELECT * FROM books WHERE Status ='0' ORDER BY RAND()");
 				                $rows = array();
 				                while($r = mysqli_fetch_array($result)) {
 				                	$array1 = $r;
@@ -727,7 +736,7 @@
 		    					//in progress
 			    				$data2 = array_shift($elements);
 				                $mysql_connection = mysqli_connect($DBurl,$DBusername,$DBpassword,$DBname);
-				                $result = mysqli_query($mysql_connection,"SELECT * FROM books WHERE Status = '1'");
+				                $result = mysqli_query($mysql_connection,"SELECT * FROM books WHERE Status = '1' ORDER BY RAND()");
 				                $rows = array();
 				                while($r = mysqli_fetch_array($result)) {
 				                	$array1 = $r;
@@ -743,24 +752,76 @@
 		    		//gets users books, example /user/1/r/c
 		    			$data2 = array_shift($elements);
 		    			if($data2==-1){
-		    				$user = new CurrentUser();
-		    				if(isset($_COOKIE['ID'])&&$user->isLoggedIn()){
-		    					$mysql_connection = mysqli_connect($DBurl,$DBusername,$DBpassword,$DBname);
-				                $result = mysqli_query($mysql_connection,"SELECT * FROM books WHERE UserID = '".mysqli_real_escape_string($mysql_connection,$_COOKIE['ID'])."'");
+							$data2 = array_shift($elements);
+		    				switch($data2){
+		    					case 'c':
+			    					$user = new CurrentUser();
+				    				if(isset($_COOKIE['ID'])&&$user->isLoggedIn()){
+				    					$mysql_connection = mysqli_connect($DBurl,$DBusername,$DBpassword,$DBname);
+						                $result = mysqli_query($mysql_connection,"SELECT * FROM books WHERE UserID = '".mysqli_real_escape_string($mysql_connection,$_COOKIE['ID'])."' AND Status = '1' ORDER BY RAND()");
+						                $rows = array();
+						                while($r = mysqli_fetch_array($result)) {
+						                    $array1 = $r;
+						                	$likes = new Likes($r['ID']);
+						                	$array1['Likes'] =  $likes->getLikes();
+						                	$rows[] = $array1;
+						                }
+						                print json_encode($rows);
+				    				}
+		    						break;
+		    					case 's':
+		    						$user = new CurrentUser();
+				    				if(isset($_COOKIE['ID'])&&$user->isLoggedIn()){
+				    					$mysql_connection = mysqli_connect($DBurl,$DBusername,$DBpassword,$DBname);
+						                $result = mysqli_query($mysql_connection,"SELECT * FROM books WHERE UserID = '".mysqli_real_escape_string($mysql_connection,$_COOKIE['ID'])."' ORDER BY RAND()");
+						                $rows = array();
+						                while($r = mysqli_fetch_array($result)) {
+						                    $array1 = $r;
+						                	$likes = new Likes($r['ID']);
+						                	$array1['Likes'] =  $likes->getLikes();
+						                	$rows[] = $array1;
+						                }
+						                print json_encode($rows);
+				    				}
+		    						break;
+		    					default:
+									$user = new CurrentUser();
+				    				if(isset($_COOKIE['ID'])&&$user->isLoggedIn()){
+				    					$mysql_connection = mysqli_connect($DBurl,$DBusername,$DBpassword,$DBname);
+						                $result = mysqli_query($mysql_connection,"SELECT * FROM books WHERE UserID = '".mysqli_real_escape_string($mysql_connection,$_COOKIE['ID'])."' ORDER BY RAND()");
+						                $rows = array();
+						                while($r = mysqli_fetch_array($result)) {
+						                    $array1 = $r;
+						                	$likes = new Likes($r['ID']);
+						                	$array1['Likes'] =  $likes->getLikes();
+						                	$rows[] = $array1;
+						                }
+						                print json_encode($rows);
+				    				}
+		    						break;
+		    				}
+
+
+		    				
+		    			}else{
+		    				if(is_numeric($data2)){
+								$mysql_connection = mysqli_connect($DBurl,$DBusername,$DBpassword,$DBname);
+				                $result = mysqli_query($mysql_connection,"SELECT * FROM books WHERE UserID = '".mysqli_real_escape_string($mysql_connection,$data2)."' ORDER BY RAND()");
+				                $rows = array();
+				                while($r = mysqli_fetch_array($result)) {
+				                    $rows[] = $r;
+				                }
+				                print json_encode($rows);
+		    				}else{
+								$mysql_connection = mysqli_connect($DBurl,$DBusername,$DBpassword,$DBname);
+				                $result = mysqli_query($mysql_connection,"SELECT * FROM books WHERE CreatorsUsername = '".mysqli_real_escape_string($mysql_connection,$data2)."' ORDER BY RAND()");
 				                $rows = array();
 				                while($r = mysqli_fetch_array($result)) {
 				                    $rows[] = $r;
 				                }
 				                print json_encode($rows);
 		    				}
-		    			}else{
-		    				$mysql_connection = mysqli_connect($DBurl,$DBusername,$DBpassword,$DBname);
-			                $result = mysqli_query($mysql_connection,"SELECT * FROM books WHERE UserID = '".mysqli_real_escape_string($mysql_connection,$data2)."'");
-			                $rows = array();
-			                while($r = mysqli_fetch_array($result)) {
-			                    $rows[] = $r;
-			                }
-			                print json_encode($rows);
+		    				
 		    			}
 		                
 		    		break;
@@ -773,7 +834,7 @@
 		                    OR Genre1 Like '%".mysqli_real_escape_string($mysql_connection,$data2)."%'
 		                    OR Genre2 Like '%".mysqli_real_escape_string($mysql_connection,$data2)."%'
 		                    OR Genre3 Like '%".mysqli_real_escape_string($mysql_connection,$data2)."%'
-		                    OR CreatorsUsername Like '%".mysqli_real_escape_string($mysql_connection,$data2)."%'");
+		                    OR CreatorsUsername Like '%".mysqli_real_escape_string($mysql_connection,$data2)."%'  ORDER BY RAND()");
 		                $rows = array();
 		                while($r = mysqli_fetch_array($result)) {
 		                    $rows[] = $r;

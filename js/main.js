@@ -82,7 +82,7 @@ $(document).ready(function(){
 		    LogIn();
 		    }
 		    if($("#searchInput").is(":focus")  ) {
-		    doSearch($('#searchInput').val());
+		    	doSearch($('#searchInput').val());
 		    }
 		}
 	});
@@ -115,7 +115,18 @@ $(document).ready(function(){
 	$(".tab-content").on("click","#btnNoBookMakeNew",function(){
 		newBook();
 	});
+	/*$("#flipbook").turn({
+	  width: 400,
+	  height: 300,
+	  autoCenter: true
+	});*/
 
+	workInProgress();
+
+	$(".tab-content").on("click",".Read",function(){
+			//load book reader
+		openBookReader($(this).attr('id'));
+	});
 //End On Doc Ready	
 });
 
@@ -205,6 +216,7 @@ function LogIn(){
 						case "1" :
 							$("#dynamicHeaderArea").load("html/headerLoggedIn.html");
 							loadUserTab("loggingIn");
+							loadNotifications();
 							break;
 						case "2" :
 							$(".loginBit").addClass("has-error");
@@ -272,18 +284,30 @@ function returnTemplate(filename){
 
 			returnTemplate("searchTab").done(function(data1){
 		$(".tab-content").append(data1);
-
-
+		$("#tabSearch .shelf").owlCarousel({
+		    autoPlay : true,
+		    stopOnHover : true,
+		    lazyLoad : true
+		});
+		if($("#tbSearch")[0]){
+			$("#tbSearch").remove();
+		}
 		$('#tabs').append("<li style='display:none;' id='tbSearch'><a href='#tabSearch' data-toggle='tab'><button class='close closeTab' id='closeSearch' type='button'>x</button>Search: " + query + "</a></li>");
 		//Was gonna use slideUp here but it doesnt work due to positioning.
 		$("#tbSearch").fadeIn(function(){
 			$('#tbSearch a[href="#tabSearch"]').tab('show');
-				$("#closeSearch").click(function(){
+				$("#closeSearch").click(function(e){
+					e.preventDefault();
 					setLocationHash("");
-					$('#tbInProgress a[href="#tabInProgress"]').tab('show');
+					
 					$("#tbSearch").fadeOut(function(){
 						$("#tbSearch").remove();
+						$("#tabSearch").remove();
 					});
+					if($("#tbSearch").hasClass("active")){
+						$('#tbInProgress a[href="#tabInProgress"]').tab('show');
+					}
+					
 				});
 						
 
@@ -293,46 +317,64 @@ function returnTemplate(filename){
 
 
 	 			//show results of search here
-	 		$.getJSON(apiPath + "/search/field/" + searchQuery, function(data) {
-			if (data.length > 0){
+	 	$.getJSON(apiPath + "/search/field/" + searchQuery, function(data) {
+			if (data.length > 1){
+				//$("#owl-SearchResults").data('owlCarousel').destroy();
 			for (var i = 0; i < data.length; i++){
 				var book = data[i];
 				var postContent = ''
-				postContent += '<div class="col-md-6 col-md-4">';
-				postContent +=	'<div class="thumbnail">'
-				postContent += '<img src=" ' + book.BookCoverLocation + '" width="150" height="200" alt="..." />'
-				postContent += '<div class="caption">'
-				postContent +=  '<h3>' + book.Title + '</h3>'
-				postContent += '<h5>' + book.Description + '</h5>'
-				postContent += '<h4><span class="glyphicon glyphicon-edit"></span>Likes</h4>'
-				postContent += '<h4><span class="glyphicon glyphicon-user"> </span>' + book.CreatorsUsername + '</h4>'
-				postContent += '<div class="tags">'
-				postContent +=	'<a href="#">'
-				postContent += 	'<span class="badge">'+ book.Genre1 + '</span>'
-				postContent	+=	'</a></div></div></div></div>'
-           
-
-				$(".row").append(postContent);
-
+				postContent += '<div>';
+				postContent += '<div>';
+				postContent += "<figure class='book'>";
+				postContent += "<ul class='hardcover_front'>";
+				postContent += "<li>";
+				postContent += '<img src="'+book.BookCoverLocation+'" alt="" width="100%" height="100%">';
+				postContent += "</li>";
+				postContent += "<li></li>";
+				postContent += "</ul>";
+				postContent += "<ul class='page'>";
+				postContent += "<li></li>";
+				postContent += "<li>";
+				postContent += '<center><a class="bookPlacerButton" href="#" id='+book.ID+'>Read</a>';
+				postContent += '<a class="bookProfile bookPlacerButton" href="#" id='+book.ID+'>Book Profile</a></center>';
+				postContent += "</li>";
+				postContent += "<li></li>";
+				postContent += "<li></li>";
+				postContent += "<li></li>";
+				postContent += "</ul>";
+				postContent += "<ul class='hardcover_back'>";
+				postContent += "<li></li>";
+				postContent += "<li></li>";
+				postContent += "</ul>";
+				postContent += "<ul class='book_spine'>";
+				postContent += "<li></li>";
+				postContent += "<li></li>";
+				postContent += "</ul>";
+				postContent += "</figure>";
+				postContent += '</div>';
+				postContent += '<div>';
+				postContent += '<h5 ><i class="fa fa-user"></i> ' + book.CreatorsUsername + '</h5>';
+				postContent += '<h5 ><i class="fa fa-users"></i> ' + book.Likes + ' </h5>';
+				postContent += '<h5><span class="badge" id="genre">' + book.Genre1 + '</span></h5>';
+				postContent += '<h5 ><span class="badge" id="genre">' + book.Genre2 + '</span></h5>';
+				postContent += '<h5 ><span class="badge" id="genre">' + book.Genre3 + '</span></h5>';
+				postContent += '</div>';
+				postContent += '</div>';
+				$("#owl-SearchResults").data('owlCarousel').addItem(postContent);
 			}
-
+						//Initialize tooltip for booktitles and set the container to body so that it fills the full area
+				$('.bookTitle').tooltip({container: 'body'});
+				$(".bookProfile").click(function(){
+					loadBookProfile($(this).attr('id'));
+				});
 			} else{
 				console.log("No books");
-				$('.row').html("<h3>Oh noes, no books were found!</h3>");
-
+				//$('#tabSearch .well').html("<h3>Oh noes, you have no books! Create a <a id='btnNoBookMakeNew' class='btn btn-primary btn-xs'> New Book</a> </h3>");
 			}
 			setLocationHash("search/" + query);
 		});
 	
 	 	}
-	 		//Closes search results
-		$("#btnSearchClose").click(function(){
-			setLocationHash("");
-		 	$("#btnSearchClose").hide();
-		 	$("#searchResults").slideUp("fast",function(){
-		 		isOpen = false;
-		 	});
-		});
 	}
 
 function register(username,password){
@@ -477,6 +519,22 @@ function addToBook(bookID){
 
 }
 
+function workInProgress(){
+
+	setLocationHash("notification");
+	returnTemplate('workInProgress').done(function(data1){
+		$('#theModal').modal("show");
+		$(".modal-body").append(data1);
+		$("#theModalLabel").html("Message from Server");
+		//load all users deets based upon the userID passed
+		//poo that into the template
+		$("#btnEdit").click(function(){
+		 $(".form-control").prop('disabled',false);
+		});
+	});
+
+}
+
 function newBook(){
 		setLocationHash("new");
 		returnTemplate('newBook').done(function(data1){
@@ -499,14 +557,33 @@ function newBook(){
 }
 
 function loadNotifications(){
-		$.getJSON(apiPath + "/core/notifications/5", function(data) {
+		$.getJSON(apiPath + "/core/notifications/6", function(data) {
 			if (data.length > 1){
 				var postContent = ''
 				for (var i = 0; i < data.length; i++){
 					var note = data[i];
-					postContent += '<li role="presentation"><a role="menuitem" tabindex="-1" href="#">' + note + '</a></li>';
-					//$("#btnNotifcations").addItem(postContent);
+					postContent += '<li role="presentation"><a class="miniNotification" role="menuitem" tabindex="-1" href="#" mode="'+note.Mode+'" BookID="'+note.BookID+'" UserID="'+note.UserID+'">' + note.Message + '</a></li>';
 				}
+				$(".page-header").on("click",".miniNotification",function(){
+					console.log($(this).attr('mode')+" "+$(this).attr('bookid'));
+					switch($(this).attr('mode')){
+						case "1":
+						//go to book
+						loadBookProfile($(this).attr('bookid'));
+						break;
+						case "2":
+						//go to user
+						break;
+						case "3":
+						//go to book
+						loadBookProfile($(this).attr('bookid'));
+						break;
+						case "4":
+						//go to book
+						loadBookProfile($(this).attr('bookid'));
+						break;
+					}
+				});
 				$("#btnNotifcations").html(postContent);
 			} else{
 				console.log("No Notifications");
@@ -561,6 +638,9 @@ function hideUserTab(){
 		$('#tbInProgress a[href="#tabInProgress"]').tab('show');
 	}
 	$("#userTab").fadeOut(function(){
+		$("#owl-userAllBooks").data('owlCarousel').removeItem();
+		$("#owl-userCompleted").data('owlCarousel').removeItem();
+		$("#owl-userNearingCompletion").data('owlCarousel').removeItem();
 		$("#userTab").remove();
 	});
 
@@ -585,10 +665,10 @@ function setPageTitle(title){
 						//Initialize tooltip for booktitles and set the container to body so that it fills the full area
 
 				$('.bookTitle').tooltip({container: 'body'});
-				$("div .bookCompleted").click(function(){
-				var bookID = ($(this).attr('id'));
-				addToBook(bookID);
-				});
+				/*$("div .bookCompleted").click(function(){
+					var bookID = ($(this).attr('id'));
+					addToBook(bookID);
+				});*/
 			} else{
 				console.log("No books");
 				$('#tabUser .well').html("<h3>Oh noes, you have no books! Create a <a id='btnNoBookMakeNew' class='btn btn-primary btn-xs'> New Book</a> </h3>");
@@ -604,22 +684,166 @@ function loadUserBooks(){
 			for (var i = 0; i < data.length; i++){
 				var book = data[i];
 				var postContent = ''
-				postContent += '<div class="item bookCompleted" style="width=100%;">';
-				postContent += '<a id="bookCover"><img style="width:150px;height:200px;" src=' + book.BookCoverLocation + '></a>';
-				postContent += '<div class="imgOverlay">';
-				postContent +=	'<p class="bookTitle" data-placement="bottom" data-toggle="tooltip" title="' + book.Description +'">' + book.Title + '</p>';
-				postContent +=	'</div>';
-				postContent +=	'</div>';
+				postContent += '<div>';
+				postContent += '<div>';
+				postContent += "<figure class='book'>";
+				postContent += "<ul class='hardcover_front'>";
+				postContent += "<li>";
+				postContent += '<img src="'+book.BookCoverLocation+'" alt="" width="100%" height="100%">';
+				postContent += "</li>";
+				postContent += "<li></li>";
+				postContent += "</ul>";
+				postContent += "<ul class='page'>";
+				postContent += "<li></li>";
+				postContent += "<li>";
+				postContent += '<center><a class="bookPlacerButton" href="#" id='+book.ID+'>Read</a>';
+				postContent += '<a class="bookProfile bookPlacerButton" href="#" id='+book.ID+'>Book Profile</a></center>';
+				postContent += "</li>";
+				postContent += "<li></li>";
+				postContent += "<li></li>";
+				postContent += "<li></li>";
+				postContent += "</ul>";
+				postContent += "<ul class='hardcover_back'>";
+				postContent += "<li></li>";
+				postContent += "<li></li>";
+				postContent += "</ul>";
+				postContent += "<ul class='book_spine'>";
+				postContent += "<li></li>";
+				postContent += "<li></li>";
+				postContent += "</ul>";
+				postContent += "</figure>";
+				postContent += '</div>';
+				postContent += '<div>';
+				postContent += '<h5 ><i class="fa fa-user"></i> ' + book.CreatorsUsername + '</h5>';
+				postContent += '<h5 ><i class="fa fa-users"></i> ' + book.Likes + ' </h5>';
+				postContent += '<h5><span class="badge" id="genre">' + book.Genre1 + '</span></h5>';
+				postContent += '<h5 ><span class="badge" id="genre">' + book.Genre2 + '</span></h5>';
+				postContent += '<h5 ><span class="badge" id="genre">' + book.Genre3 + '</span></h5>';
+				postContent += '</div>';
+				postContent += '</div>';
 				$("#owl-userAllBooks").data('owlCarousel').addItem(postContent);
+			}
+						//Initialize tooltip for booktitles and set the container to body so that it fills the full area
+
+				$('.bookTitle').tooltip({container: 'body'});
+				$(".bookProfile").click(function(){
+					loadBookProfile($(this).attr('id'));
+				});
+			} else{
+				console.log("No books");
+				$('#tabUser .well').html("<h3>Oh noes, you have no books! Create a <a id='btnNoBookMakeNew' class='btn btn-primary btn-xs'> New Book</a> </h3>");
+
+			}
+		});
+
+
+		$.getJSON(apiPath + "/search/user/-1/c", function(data) {
+			if (data.length > 1){
+			for (var i = 0; i < data.length; i++){
+				var book = data[i];
+				var postContent = ''
+				postContent += '<div>';
+				postContent += '<div>';
+				postContent += "<figure class='book'>";
+				postContent += "<ul class='hardcover_front'>";
+				postContent += "<li>";
+				postContent += '<img src="'+book.BookCoverLocation+'" alt="" width="100%" height="100%">';
+				postContent += "</li>";
+				postContent += "<li></li>";
+				postContent += "</ul>";
+				postContent += "<ul class='page'>";
+				postContent += "<li></li>";
+				postContent += "<li>";
+				postContent += '<center><a class="bookPlacerButton" href="#" id='+book.ID+'>Read</a>';
+				postContent += '<a class="bookProfile bookPlacerButton" href="#" id='+book.ID+'>Book Profile</a></center>';
+				postContent += "</li>";
+				postContent += "<li></li>";
+				postContent += "<li></li>";
+				postContent += "<li></li>";
+				postContent += "</ul>";
+				postContent += "<ul class='hardcover_back'>";
+				postContent += "<li></li>";
+				postContent += "<li></li>";
+				postContent += "</ul>";
+				postContent += "<ul class='book_spine'>";
+				postContent += "<li></li>";
+				postContent += "<li></li>";
+				postContent += "</ul>";
+				postContent += "</figure>";
+				postContent += '</div>';
+				postContent += '<div>';
+				postContent += '<h5 ><i class="fa fa-user"></i> ' + book.CreatorsUsername + '</h5>';
+				postContent += '<h5 ><i class="fa fa-users"></i> ' + book.Likes + ' </h5>';
+				postContent += '<h5><span class="badge" id="genre">' + book.Genre1 + '</span></h5>';
+				postContent += '<h5 ><span class="badge" id="genre">' + book.Genre2 + '</span></h5>';
+				postContent += '<h5 ><span class="badge" id="genre">' + book.Genre3 + '</span></h5>';
+				postContent += '</div>';
+				postContent += '</div>';
 				$("#owl-userCompleted").data('owlCarousel').addItem(postContent);
+			}
+						//Initialize tooltip for booktitles and set the container to body so that it fills the full area
+
+				$('.bookTitle').tooltip({container: 'body'});
+				$(".bookProfile").click(function(){
+					loadBookProfile($(this).attr('id'));
+				});
+			} else{
+				console.log("No books");
+				$('#tabUser .well').html("<h3>Oh noes, you have no books! Create a <a id='btnNoBookMakeNew' class='btn btn-primary btn-xs'> New Book</a> </h3>");
+
+			}
+		});
+
+
+		$.getJSON(apiPath + "/search/user/-1/s", function(data) {
+			if (data.length > 1){
+			for (var i = 0; i < data.length; i++){
+				var book = data[i];
+				var postContent = ''
+				postContent += '<div>';
+				postContent += '<div>';
+				postContent += "<figure class='book'>";
+				postContent += "<ul class='hardcover_front'>";
+				postContent += "<li>";
+				postContent += '<img src="'+book.BookCoverLocation+'" alt="" width="100%" height="100%">';
+				postContent += "</li>";
+				postContent += "<li></li>";
+				postContent += "</ul>";
+				postContent += "<ul class='page'>";
+				postContent += "<li></li>";
+				postContent += "<li>";
+				postContent += '<center><a class="bookPlacerButton" href="#" id='+book.ID+'>Read</a>';
+				postContent += '<a class="bookProfile bookPlacerButton" href="#" id='+book.ID+'>Book Profile</a></center>';
+				postContent += "</li>";
+				postContent += "<li></li>";
+				postContent += "<li></li>";
+				postContent += "<li></li>";
+				postContent += "</ul>";
+				postContent += "<ul class='hardcover_back'>";
+				postContent += "<li></li>";
+				postContent += "<li></li>";
+				postContent += "</ul>";
+				postContent += "<ul class='book_spine'>";
+				postContent += "<li></li>";
+				postContent += "<li></li>";
+				postContent += "</ul>";
+				postContent += "</figure>";
+				postContent += '</div>';
+				postContent += '<div>';
+				postContent += '<h5 ><i class="fa fa-user"></i> ' + book.CreatorsUsername + '</h5>';
+				postContent += '<h5 ><i class="fa fa-users"></i> ' + book.Likes + ' </h5>';
+				postContent += '<h5><span class="badge" id="genre">' + book.Genre1 + '</span></h5>';
+				postContent += '<h5 ><span class="badge" id="genre">' + book.Genre2 + '</span></h5>';
+				postContent += '<h5 ><span class="badge" id="genre">' + book.Genre3 + '</span></h5>';
+				postContent += '</div>';
+				postContent += '</div>';
 				$("#owl-userNearingCompletion").data('owlCarousel').addItem(postContent);
 			}
 						//Initialize tooltip for booktitles and set the container to body so that it fills the full area
 
 				$('.bookTitle').tooltip({container: 'body'});
-				$("div .bookCompleted").click(function(){
-				var bookID = ($(this).attr('id'));
-				addToBook(bookID);
+				$(".bookProfile").click(function(){
+					loadBookProfile($(this).attr('id'));
 				});
 			} else{
 				console.log("No books");
@@ -637,18 +861,44 @@ function loadBooks(){
 		for (var i = 0; i < data.length; i++){
 			var book = data[i];
 			var postContent = ''
-			postContent+= '<div class="item bookInProgress" id="' + book.ID +'" style="width=100%;">';
-			postContent+= '<a id="bookCover"><img class="lazyOwl" style="width:150px;height:200px;" data-src="' + book.BookCoverLocation + '"></a>';
-			postContent+= '<div class="imgOverlay">';
-			postContent+= '<p class="bookTitle" data-placement="bottom" data-toggle="tooltip" title="' + book.Description + '">' + book.Title+ '</p>';
-			postContent+= '<span class="badge">83%</span>';
-			postContent+=	'</div>';
-			postContent+=	'<h5 ><i class="fa fa-user"></i> ' + book.CreatorsUsername + '</h5>';
-			postContent+= '<h5 ><i class="fa fa-users"></i> ' + book.Likes + ' </h5>';
-			postContent+= '<h5><span class="badge" id="genre">' + book.Genre1 + '</span>';
-			postContent+= '<span class="badge" id="genre">' + book.Genre2 + '</span>';
-			postContent+= '<span class="badge" id="genre">' + book.Genre3 + '</span></h5>';
-			postContent+=	'</div>';
+			postContent += '<div>';
+			postContent += '<div>';
+			postContent += "<figure class='book'>";
+			postContent += "<ul class='hardcover_front'>";
+			postContent += "<li>";
+			postContent += '<img src="'+book.BookCoverLocation+'" alt="" width="100%" height="100%">';
+			postContent += "</li>";
+			postContent += "<li></li>";
+			postContent += "</ul>";
+			postContent += "<ul class='page'>";
+			postContent += "<li></li>";
+			postContent += "<li>";
+			postContent += '<center><a class="Read bookPlacerButton" href="#" id='+book.ID+'>Read</a>';
+			postContent += '<a class="bookProfile bookPlacerButton" href="#" id='+book.ID+'>Book Profile</a></center>';
+			postContent += "</li>";
+			postContent += "<li></li>";
+			postContent += "<li></li>";
+			postContent += "<li></li>";
+			postContent += "</ul>";
+			postContent += "<ul class='hardcover_back'>";
+			postContent += "<li></li>";
+			postContent += "<li></li>";
+			postContent += "</ul>";
+			postContent += "<ul class='book_spine'>";
+			postContent += "<li></li>";
+			postContent += "<li></li>";
+			postContent += "</ul>";
+			postContent += "</figure>";
+			postContent += '</div>';
+			postContent += '<div>';
+			postContent += '<h5 ><i class="fa fa-user"></i> ' + book.CreatorsUsername + '</h5>';
+			postContent += '<h5 ><i class="fa fa-users"></i> ' + book.Likes + ' </h5>';
+			postContent += '<h5><span class="badge" id="genre">' + book.Genre1 + '</span></h5>';
+			postContent += '<h5 ><span class="badge" id="genre">' + book.Genre2 + '</span></h5>';
+			postContent += '<h5 ><span class="badge" id="genre">' + book.Genre3 + '</span></h5>';
+			postContent += '</div>';
+			postContent += '</div>';
+
 			$("#owl-featuredBooks").data('owlCarousel').addItem(postContent);
 			$("#owl-recentlyCompleted").data('owlCarousel').addItem(postContent);
 			$("#owl-topRated").data('owlCarousel').addItem(postContent);
@@ -656,9 +906,16 @@ function loadBooks(){
 					//Initialize tooltip for booktitles and set the container to body so that it fills the full area
 
 			$('.bookTitle').tooltip({container: 'body'});
-			$("div .bookCompleted").click(function(){
-			var bookID = ($(this).attr('id'));
-				addToBook(bookID);
+			$(".genreButton").click(function(){
+				var search = ($(this).attr('id'));
+				doSearch(search);
+			});
+			$(".usernameButton").click(function(){
+				var username = ($(this).attr('id'));
+				loadUsersProfileTab(username);
+			});
+			$(".bookProfile").click(function(){
+				loadBookProfile($(this).attr('id'));
 			});
 		} else{
 			console.log("No books");
@@ -670,18 +927,43 @@ function loadBooks(){
 		for (var i = 0; i < data.length; i++){
 			var book = data[i];
 			var postContent = ''
-		 	postContent+= '<div class="item bookInProgress" id="' + book.ID +'" style="width=100%;">';
-			postContent+= '<a id="bookCover"><img class="lazyOwl" style="width:150px;height:200px;" data-src="' + book.BookCoverLocation + '"></a>';
-			postContent+= '<div class="imgOverlay">';
-			postContent+= '<p class="bookTitle" data-placement="bottom" data-toggle="tooltip" title="' + book.Description + '">' + book.Title+ '</p>';
-			postContent+= '<span class="badge">83%</span>';
-			postContent+=	'</div>';
-			postContent+=	'<h5 ><i class="fa fa-user"></i> ' + book.CreatorsUsername + '</h5>';
-			postContent+= '<h5 ><i class="fa fa-users"></i> ' + book.Likes + ' </h5>';
-			postContent+= '<h5><span class="badge" id="genre">' + book.Genre1 + '</span>';
-			postContent+= '<span class="badge" id="genre">' + book.Genre2 + '</span>';
-			postContent+= '<span class="badge" id="genre">' + book.Genre3 + '</span></h5>';
-			postContent+=	'</div>';
+			postContent += '<div>';
+			postContent += '<div>';
+			postContent += "<figure class='book'>";
+			postContent += "<ul class='hardcover_front'>";
+			postContent += "<li>";
+			postContent += '<img src="'+book.BookCoverLocation+'" alt="" width="100%" height="100%">';
+			postContent += "</li>";
+			postContent += "<li></li>";
+			postContent += "</ul>";
+			postContent += "<ul class='page'>";
+			postContent += "<li></li>";
+			postContent += "<li>";
+			postContent += '<center><a class="Read bookPlacerButton" href="#" id='+book.ID+'>Read</a>';
+			postContent += '<a class="bookProfile bookPlacerButton" href="#" id='+book.ID+'>Book Profile</a></center>';
+			postContent += "</li>";
+			postContent += "<li></li>";
+			postContent += "<li></li>";
+			postContent += "<li></li>";
+			postContent += "</ul>";
+			postContent += "<ul class='hardcover_back'>";
+			postContent += "<li></li>";
+			postContent += "<li></li>";
+			postContent += "</ul>";
+			postContent += "<ul class='book_spine'>";
+			postContent += "<li></li>";
+			postContent += "<li></li>";
+			postContent += "</ul>";
+			postContent += "</figure>";
+			postContent += '</div>';
+			postContent += '<div>';
+			postContent += '<h5 ><i class="fa fa-user"></i> ' + book.CreatorsUsername + '</h5>';
+			postContent += '<h5 ><i class="fa fa-users"></i> ' + book.Likes + ' </h5>';
+			postContent += '<h5><span class="badge" id="genre">' + book.Genre1 + '</span></h5>';
+			postContent += '<h5 ><span class="badge" id="genre">' + book.Genre2 + '</span></h5>';
+			postContent += '<h5 ><span class="badge" id="genre">' + book.Genre3 + '</span></h5>';
+			postContent += '</div>';
+			postContent += '</div>';
 			$("#owl-newlyStarted").data('owlCarousel').addItem(postContent);
 			$("#owl-recentlyUpdated").data('owlCarousel').addItem(postContent);
 			$("#owl-nearingCompletion").data('owlCarousel').addItem(postContent);
@@ -689,11 +971,9 @@ function loadBooks(){
 					//Initialize tooltip for booktitles and set the container to body so that it fills the full area
 		
 			$('.bookTitle').tooltip({container: 'body'});
-			$("div .bookInProgress").click(function(){
-				var bookID = ($(this).attr('id'));
-				addToBook(bookID);
+			$(".bookProfile").click(function(){
+				loadBookProfile($(this).attr('id'));
 			});
-
 		}else{
 			console.log("No books");
 		}
@@ -701,3 +981,147 @@ function loadBooks(){
 	});
 
 }
+
+
+
+
+
+//Johns new js shiz
+
+
+function sleep(milliseconds) {
+  var start = new Date().getTime();
+  for (var i = 0; i < 1e7; i++) {
+    if ((new Date().getTime() - start) > milliseconds){
+      break;
+    }
+  }
+}
+
+function loadUsersProfileTab(username){
+
+	
+}
+
+
+function loadBookProfile(id){
+	console.log("Attempting to load book with ID:"+id);
+	var bookID = (id);
+	$.getJSON(apiPath + "/books/"+bookID, function(data) {
+		if(data){
+			if($("#tbBookHome"+data.ID)[0]){
+				$("#tbBookHome"+data.ID).remove();
+			}
+			var html = '';
+			html += '<div id="tabBookHome'+data.ID+'" class="tab-pane">';
+			html += '<h2>'+data.Title+' by '+data.CreatorsUsername+'</h2>';
+			html += '<div class="well">';
+			html += '<div class="row">'
+			html += '<div class="col-md-6">'
+			html += '<div class="left">';
+			html += '<a class="item" id="' + data.ID +'"><img style="width:450px;height:600px;" src="' + data.BookCoverLocation + '"></a>';
+			html += '</div>';
+			html +=  '</div>'
+			html += '<div class="col-md-6">'
+			html += '<div class="right">';
+			html += '<p>Description: '+data.Description+'</p>';
+			html += '<p>Author: '+data.CreatorsUsername+'</p>';
+			html += '<input class="btn btn-primary btn-lg btn-block Read" id="1" type="submit" value="Read">';
+			html += '</div>';
+			html += '</div>'
+			html += '</div>'
+			html += '</div>';
+			html += '</div>';
+			if($("#tabBookHome"+data.ID)[0]){
+				$("#tabBookHome"+data.ID).remove();
+			}
+			$(".tab-content").append(html);
+			if($("#tbBookHome"+data.ID)[0]){
+				$("#tbBookHome"+data.ID	).remove();
+			}
+			$('#tabs').append("<li style='display:none;' id='tbBookHome"+data.ID+"'><a href='#tabBookHome"+data.ID+"' data-toggle='tab'><button class='close closeTab' id='closeBookPreview"+data.ID+"' type='button'>x</button>"+data.Title+"</a></li>");
+			//Was gonna use slideUp here but it doesnt work due to positioning.
+			$("#tbBookHome"+data.ID).fadeIn(function(){
+				$('#tbBookHome'+data.ID+' a[href="#tabBookHome'+data.ID+'"]').tab('show');
+				$("#closeBookPreview"+data.ID).click(function(e){
+					e.preventDefault();
+					setLocationHash("");
+					
+					$("#tbBookHome"+data.ID).fadeOut(function(){
+						$("#tbBookHome"+data.ID).remove();
+						$("#tabBookHome"+data.ID).remove();
+					});
+					if($("#tbBookHome"+data.ID).hasClass("active")){
+						$('#tbInProgress a[href="#tabInProgress"]').tab('show');
+					}
+					
+				});
+			});
+		}else{
+			console.log("No book data");
+		}
+	});
+}
+
+
+
+function openBookReader(ID){
+	$.getJSON(apiPath + "/books/"+ID, function(data) {
+		if($("#bookReadID")[0]){
+				$("#bookReadID").remove();
+			}
+		var bookReader ='';
+		bookReader +='<div id="bookReadID"> ';
+		bookReader +='<div class="panel panel-default" style="width=1000px;">';
+		bookReader +='<div class="panel-body">';
+
+		bookReader +='<center>';
+		bookReader +='<div id="mybook">';
+		bookReader +='<div class="bookCover item"><div><img style="width:100%;height:100%;"src= "'+data.BookCoverLocation+'"></div></div>';
+		bookReader +='<div class="bookCoverBack" ></div>';
+
+		bookReader +='<div class="pageCover"> This is the page 1 </div>';
+		bookReader +='<div class="pageCover"> This is the page 2 </div>';
+		bookReader +='<div class="pageCover"> This is the page 3 </div>';
+		bookReader +='<div class="pageCover"> the end </div>';
+
+		
+		bookReader +='<div class="bookCoverBack" ></div>';
+		bookReader +='<div class="bookCoverBack" ></div>';
+		bookReader +='</div>';
+		bookReader +='</center>';
+
+		bookReader +='</div>';
+		bookReader +='</div>';
+		bookReader +='</div>';
+
+
+		$('#bookContanerModal').modal("show");
+		$(".bookContaner").append(bookReader);
+		console.log(screenWidth()+" "+screenHeight());
+		var ratio = 1.5;
+		$('#mybook').wowBook({
+	      height : calcModalBookHeight(),
+	      hardcovers : true,
+	      width  : calcModalBookWidth(),
+	      centeredWhenClosed : true
+	    });
+
+	});
+}
+
+
+
+function screenWidth(){
+	return screen.width;
+}
+function screenHeight(){
+	return screen.height;
+}
+function calcModalBookWidth(){
+	return(screenWidth()/20)*12;
+}
+function calcModalBookHeight(){
+	return ((calcModalBookWidth()/2)/3)*4;
+}
+
